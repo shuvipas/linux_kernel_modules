@@ -2,7 +2,7 @@
 #include <linux/module.h>
 #include <linux/printk.h>
 
-static int hello_3_data --initdata =3;
+static int hello_3_data __initdata = 3;
 
 
 static int __init hello_3_init(void){
