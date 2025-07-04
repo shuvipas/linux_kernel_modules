@@ -4,7 +4,7 @@
 MODULE_LICENSE("GPL");
 
 static int __init start_half(void){
-    per_info("the start of a kernel module\n");
+    pr_info("the start of a kernel module\n");
     return 0;
 }
 
