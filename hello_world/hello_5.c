@@ -37,7 +37,7 @@ static int __init hello__init(void){
     pr_info("myshort is a short integer: %hd\n", myshort);
     pr_info("myint is an integer: %d\n", myint);
     pr_info("mylong is a long integer: %ld\n", mylong);
-    pr_info("mystring is a string: %s\n", mystring);
+    pr_info("mystring is a string: %s\n", mystr);
 
     for(i=0; i<ARRAY_SIZE(intarr);i++){
         pr_info("myintarray[%d] = %d\n", i, intarr[i]);
