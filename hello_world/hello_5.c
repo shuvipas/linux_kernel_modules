@@ -23,8 +23,8 @@ module_param(myint, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(myint, "An integer");
 module_param(mylong, long, S_IRUSR);
 MODULE_PARM_DESC(mylong, "A long integer");
-module_param(mystring, charp, 0000);
-MODULE_PARM_DESC(mystring, "A character string");
+module_param(mystr, charp, 0000);
+MODULE_PARM_DESC(mystr, "A character string");
 
 module_param_array(intarr,int,&arr_argc,0000);
 MODULE_PARM_DESC(intarr, "An array of integers");
