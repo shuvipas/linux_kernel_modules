@@ -2,7 +2,7 @@
 #include <linux/module.h>
 #include <linux/printk.h>
 
-static int __int hello_2_init(void){
+static int __init hello_2_init(void){
     pr_info("hi world num 2\n");
     return 0;
 }
