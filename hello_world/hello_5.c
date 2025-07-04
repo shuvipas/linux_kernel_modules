@@ -29,7 +29,7 @@ MODULE_PARM_DESC(mystr, "A character string");
 module_param_array(intarr,int,&arr_argc,0000);
 MODULE_PARM_DESC(intarr, "An array of integers");
 
-static int __init hello__init(void){
+static int __init hello_5_init(void){
     // the kernel coding style declare all variables at the start of a block
     int i; 
 
