@@ -1,9 +1,6 @@
 # obj-m += hello_1.o see c file
-obj-m += hello_2.o
-obj-m += hello_3.o
-obj-m += hello_4.o
-obj-m += hello_5.o
-obj-m += startstop.o
+obj-m += char_device.o
+
 startstop-objs := start.o stop.o
 PWD := $(CURDIR)
 

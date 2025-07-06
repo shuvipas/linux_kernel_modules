@@ -1,7 +1,7 @@
 #include <linux/module.h>
 #include <linux/printk.h>
 
-int init_module(void){
+int init_module(void){ // old sythex dosnt run on fedora but runs on fedora
     pr_info("hello world 1\n");
     return 0;
 }
