@@ -1,3 +1,32 @@
+/*
+    input/output character device
+    - prevent concurrent access into the same device
+        atomic verible, device_open/release and call to (try_)module_get/put/refcount
+        for counting
+
+    - device_ioctl() called whenever a process tries to do an ioctl (input output control)on our 
+    device file,  calls device_read/write()
+        -device_read/write() process which has already opened the device file attempts to read from it
+          
+    Module Declarations
+    - struct that holds the functions to be called when a process does 
+    something to the device we created
+        passed to register_chrdev() in init with MAJOR_NUM, DEVICE_NAME,
+
+    - a #if for LINUX_VERSION_CODE in the init function
+
+
+
+    sudo insmod char_device
+    cat /proc/devices // see char devices
+    echo "Hello" | sudo tee /dev/char_dev // write to device
+    sudo cat /dev/char_dev // read from device
+    sudo dmesg| tail -10
+    sudo rmmod char_device
+    
+*/
+
+
 #include<linux/atomic.h>
 #include<linux/cdev.h>
 #include<linux/delay.h>
@@ -14,9 +43,9 @@
 
 #include "char_device.h"
 
-#define DEVICE_NAME "char_dev" //Dev name as it appears in /proc/devices
+#define DEVICE_NAME "char_dev" /*Dev name as it appears in /proc/devices*/
 
-#define BUF_LEN 80 // max len of msg from device
+#define BUF_LEN 80 /* max len of msg from device*/
 
 enum {
     CDEV_NOT_USED,
@@ -25,9 +54,10 @@ enum {
 
 static atomic_t already_open = ATOMIC_INIT(CDEV_NOT_USED);
 
-static char message[BUF_LEN+1]; // msg the dev will give when asked
+static char message[BUF_LEN+1]; /* msg the dev will give when asked*/
 
-static struct class *cls; //logical grouping of devices by functionality
+static struct class *cls; /*logical grouping of devices by functionality*/
+
 
 static int device_open(struct inode *inode, struct file *file){
     pr_info("device_open(%p)\n",file);
@@ -47,12 +77,12 @@ static ssize_t device_read(struct file* file, char __user *buffer,
 size_t length, loff_t *offset){
     int bytes_read = 0;
     const char* msg_ptr = message;
-    if(!(*(msg_ptr + *offset))){ // end of msg
+    if(!(*(msg_ptr + *offset))){ /* end of msg*/
         *offset =0;
-        return 0; //end of file
+        return 0; /*end of file*/
     }
     msg_ptr += *offset;
-    while (length && *msg_ptr) // put data to buffer
+    while (length && *msg_ptr) /* put data to buffer*/
     {
         put_user(*(msg_ptr++), buffer++);
         length--;
@@ -164,7 +194,5 @@ module_init(char_dev_init);
 module_exit(char_dev_exit);
 
 MODULE_LICENSE("GPL");
-
-
 
 

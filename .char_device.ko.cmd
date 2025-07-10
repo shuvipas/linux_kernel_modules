@@ -1,1 +1,0 @@
-savedcmd_char_device.ko := ld -r -m elf_x86_64 -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T /usr/src/kernels/6.15.4-200.fc42.x86_64/scripts/module.lds -o char_device.ko char_device.o char_device.mod.o .module-common.o
