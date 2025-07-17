@@ -74,17 +74,38 @@ static long test_ioctl_ioctl(struct file* fp, unsigned int cmd, unsigned long ar
     done:
     return retval;
 }
+static ssize_t test_ioctl_read(struct file* fp, char __user *buf, size_t count,
+                                 loff_t *f_pos)
+{
+    struct test_ioctl_data *ioctl_data = fp->private_data;
+    unsigned char val;
+    int retval;
+    int i = 0;
+    read_lock(&ioctl_data->lock);
+    val = ioctl_data->val;
+    read_unlock(&ioctl_data->lock);
+    for (; i < count; i++) {
+        if (copy_to_user(&buf[i], &val, 1)) {
+            retval = -EFAULT;
+            goto out;
+        }
+    }
+    retval = count;
+    out:
+        return retval;
 
-static int test-ioctl_close(struct inode *inode, struct file* fp){
+}
+
+static int test_ioctl_close(struct inode *inode, struct file* fp){
     pr_alert("%s call.\n", __func__);/*__func__= name of the current function*/
-    if(fp->privatr_data){
-        kfree(fp->privatr_data);
-        fp->privatr_data =NULL;
+    if(fp->private_data){
+        kfree(fp->private_data);
+        fp->private_data =NULL;
     }
     return 0;
 }
 
-static int test-ioctl_open(struct inode *inode, struct file* fp){
+static int test_ioctl_open(struct inode *inode, struct file* fp){
     struct test_ioctl_data *ioctl_data;
     pr_alert("%s call.\n", __func__);
     ioctl_data = kmalloc(sizeof(struct test_ioctl_data),GFP_KERNEL);/*GFP_KERNEL- Get Free Pages for Kernel*/
