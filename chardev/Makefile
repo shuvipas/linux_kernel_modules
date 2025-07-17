@@ -1,5 +1,5 @@
-obj-m += procfs_1.o
-obj-m += procfs_2.o
+obj-m += ioctl.o
+obj-m += char_device.o
 
 startstop-objs := start.o stop.o
 PWD := $(CURDIR)

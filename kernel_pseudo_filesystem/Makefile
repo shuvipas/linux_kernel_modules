@@ -1,4 +1,9 @@
-obj-m += char_device.o
+obj-m += hello_sysfs.o
+obj-m += procfs_4.o
+obj-m += procfs_3.o
+obj-m += procfs_2.o
+obj-m += procfs_1.o
+
 
 startstop-objs := start.o stop.o
 PWD := $(CURDIR)

@@ -1,3 +1,15 @@
+/*
+    insmod
+    show the last 10 kernel log messages:
+    sudo dmesg -t | tail -10
+    see if the file is here:
+    ls /proc
+    read file:
+    cat /proc/buffer1k 
+    write to file:
+    echo " shuvi's test write to procfs" | sudo tee /proc/buffer1k 
+*/
+
 #include<linux/kernel.h>
 #include<linux/module.h>
 #include<linux/proc_fs.h>
@@ -17,6 +29,9 @@ static char procfs_buffer[PROCFS_MAX_SIZE];
 
 static unsigned long procfs_buffer_size =0; 
 
+/*user wants to read so the kernel needs to write, 
+* i.e. the functions name is from the useres point of view
+*/
 static ssize_t procfile_read(struct file* file_pointer,
                             char __user* buffer, size_t buffer_length, loff_t* offset){
     char s[13] = "HelloWorld!\n";

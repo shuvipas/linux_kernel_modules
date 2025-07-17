@@ -20,7 +20,7 @@ static ssize_t procfile_read(struct file* file_pointer,
 
     if (*offset >= len || copy_to_user(buffer, s, len)) {
     pr_info("copy_to_user failed\n");
-    ret = 0; /*if the ret val is never null so it will get called endlesly  */
+    ret = 0; /*if the ret val is never null so it will get called endlesly. at the end of s it will fail */
     } else {
     pr_info("procfile read %s\n", file_pointer->f_path.dentry->d_name.name);
     *offset += len;
