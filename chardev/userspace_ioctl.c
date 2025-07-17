@@ -1,3 +1,11 @@
+/*
+make
+sudo insmod char_device.ko
+sudo chmod 666 /dev/char_dev // without this get are error: Can't open device file
+sudo dmesg| tail -10
+gcc userspace_ioctl.c -o userspace_ioctl
+./userspace_ioctl
+*/
 #include "./char_device.h"
 
 #include <stdio.h> /* standard I/O */
@@ -27,11 +35,11 @@ int ioctl_get_msg(int file_desc){
 int ioctl_get_nth_byte(int file_desc){
     int i=0;
     int c=0;
-    printf("get_nth_byte message:");
+    printf("get_nth_byte message: ");
     do{
         c = ioctl(file_desc, IOCTL_GET_NTH_BYTE, i++);
         if (c<0){
-            printf("\nioctl_get_nth_byte failed at the %d'th byte:\n", i);
+            printf("\nioctl_get_nth_byte failed at the %d'th byte: \n", i);
             return c;
         }
         putchar(c);

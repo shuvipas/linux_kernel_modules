@@ -1,4 +1,4 @@
-obj-m += ioctl.o
+
 obj-m += char_device.o
 
 startstop-objs := start.o stop.o
