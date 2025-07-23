@@ -20,7 +20,7 @@
     sudo insmod char_device
     cat /proc/devices // see char devices
     echo "Hello" | sudo tee /dev/char_dev // write to device
-    sudo cat /dev/char_dev // read from device
+    sudo cat /dev/char_dev // read from device without the ioctl
     sudo dmesg| tail -10
     sudo rmmod char_device
     
