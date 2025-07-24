@@ -68,6 +68,9 @@ work flow
 [implemented in](https://github.com/qemu/qemu/blob/v2.7.0/hw/misc/edu.c)
 
 - define addresses
+בעצם יש לנו כמה דרייברים 1. הPCI עצמו . 
+2 IRQ controller
+3  DMA controller
 
 - struct pci_driver
     static struct pci_driver edu_pci_driver = {
