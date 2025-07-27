@@ -1,3 +1,6 @@
+[How To Write Linux PCI Drivers linux docs](https://docs.kernel.org/PCI/pci.html)
+
+
 
 # Driver for a PCI device 
 this is qemu edu is a virtual PCI device, specs [here](https://www.qemu.org/docs/master/specs/edu.html) implemented [here](https://github.com/qemu/qemu/blob/v2.7.0/hw/misc/edu.c),  behaves very similar to the PCI bridge present in the COMBO6 cards developed under the Liberouter wings. The driver demonstrates interaction with a virtual PCI device through MMIO, IRQs, and DMA operations.

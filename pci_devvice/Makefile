@@ -1,4 +1,4 @@
-obj-m += pci_driver.o
+obj-m += edu_pci_driver.o
 
 PWD := $(CURDIR)
 
