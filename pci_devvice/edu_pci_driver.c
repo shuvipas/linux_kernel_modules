@@ -5,7 +5,7 @@
 
 //todo clean up the probe function (irq and all fails)
 // remove fuction
-// 
+// edu_irq_handler funct
 
 #define DEV_NAME "qemu_edu"
 #define VENDOR_ID 0x1234
@@ -16,11 +16,13 @@
 #define EDU_ADDR_INTR_STAT 0X24
 #define EDU_ADDR_INTR_RAISE 0X60
 #define EDU_ADDR_INTR_ACK 0X64
+
 struct edu_device{
     dma_addr_t dma_handle;
     void *dma_virt_addr;
     void __iomem * p_iomem;
     unsigned int irq_line;
+    wait_queue_head_t irq_wait_queue;
 };
 /*PCI Base Address Register*/
 static int edu_bar = 0; 
@@ -31,18 +33,31 @@ static struct pci_device_id edu_id[] = {
 };
 MODULE_DEVICE_TABLE(pci, edu_id); /*exports pci_device_id table to userspace for automatically load your driver*/
 
-static irq_handler_t (int irq, void *dev_id){
+static irq_handler_t edu_irq_handler(int irq, void *dev_id){
+    irq_handler_t ret;
+    struct edu_device *pdev = dev_id;
+    u32 irq_val = readl(pdv->p_iomem+ EDU_ADDR_INTR_STAT);
 
+    //todo case and do the interrupt with the char ops
+    // ret = IRQ_HANDLED;
+    // default: ret = IRQ_NONE ;
+
+    
+    writel(irq_val, dev->iomem + EDU_ADDR_INTR_ACK);
+    
+    return ret;
 }
+
 static void edu_remove(struct pci_dev *pdev){
     pr_info("edu device remove func\n");
-    pci_clear_master(pdev);
+    free_irq(edu_dev->irq_line, edu_dev) /*request_irq*/
+    pci_free_irq_vectors(pdev); /*pci_alloc_irq_vectors*/
+    pci_release_regions(pdev);
     pci_disable_device(pdev);
-    pci_release_region(pdev,edu_bar);
 }
 /* gets called to handle the device */
 static int edu_probe(struct pci_dev *pdev, const struct pci_device_id *id){
-    int itq_alloc_vec;
+    int irq_alloc_vec;
     pr_info("edu device probe func\n");
     // int err =0;
 
@@ -72,51 +87,42 @@ static int edu_probe(struct pci_dev *pdev, const struct pci_device_id *id){
         err = -ENOMEM;
         goto release_regions;
     }
-    // itq_alloc_vec = pci_alloc_irq_vectors(pdev, unsigned int min_vecs, unsigned int max_vecs, PCI_IRQ_INTX);
+    // irq_alloc_vec = pci_alloc_irq_vectors(pdev, unsigned int min_vecs, unsigned int max_vecs, PCI_IRQ_INTX);
     /*min_vecs == max_vec becuse the device uses only one interrupt source*/
-    itq_alloc_vec = pci_alloc_irq_vectors(pdev, 1,1, PCI_IRQ_MSI | PCI_IRQ_INTX);
-    if (itq_alloc_vec < 1){
+    irq_alloc_vec = pci_alloc_irq_vectors(pdev, 1,1, PCI_IRQ_MSI | PCI_IRQ_INTX);
+    if (irq_alloc_vec < 1){
         goto irq_alloc;
     }
 
 
     /* Clear pending IRQ state in hardware before enabling handler */
-    // iowrite32(~0u, edu_dev->iomem + EDU_REG_INT_ACK);
-    // writel(arg, dev->iomem + EDU_ADDR_IRQ_RAISE);
+    writel(~0u, dev->iomem + EDU_ADDR_INTR_RAISE);
 
 
     edu_dev->irq_line = pci_irq_vector(pdev, 0);/*i have only 1 vec so 0 for msi and intx*/
     if(edu_dev->irq_line==EINVAL){
-
+        goto irq_free;
     }
 
 
     if(request_irq(edu_dev->irq_line, edu_irq_handler, IRQF_SHARED, DEV_NAME,edu_dev)){
-        goto irq_fin;
+        goto irq_free;
     }
-    // 11. Enable interrupts at the device level (hardware)
-    // Now that the interrupt handler is successfully registered with the kernel,
-    // re-enable the device to start generating interrupts.
-    // dev_info(&pdev->dev, "Enabling interrupts at device level...\n");
-    // iowrite32(EDU_ALL_INT_MASK, edu_dev->regs_base + EDU_REG_INT_ENABLE);
-
 
     return 0;
 
 
-    // release_regions:
-    //     pci_release_regions(pdev);
-    irq_alloc:
-        pci_free_irq_vectors(pdev); /*pci_alloc_irq_vectors*/
-    irq_fin:
+    
+    irq_free:
         free_irq(edu_dev->irq_line, edu_dev) /*request_irq*/
+        pci_free_irq_vectors(pdev); /*pci_alloc_irq_vectors*/
+    release_regions:
+        pci_release_regions(pdev);
     disable_dev:
         pci_disable_device(pdev);
     return -1;
 
 }
-
-
 
 static struct pci_driver edu_pci_driver = {
     .name = DEV_NAME,
