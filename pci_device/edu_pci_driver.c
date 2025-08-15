@@ -5,6 +5,9 @@
 #include <linux/cdev.h>
 #include <linux/version.h>
 #include <linux/fs.h> 
+ 
+
+#include "edu_pci_driver.h"
 
 //todo clean up the probe function (irq and all fails)
 // remove fuction
@@ -24,7 +27,7 @@
 #define EDU_ADDR_LIVE_CHECK 0x4
 #define EDU_ADDR_FACTORIAL 0x8
 #define EDU_ADDR_STAT_REG 0x20
-#define EDU_COMPUTE_FACTORIAL 0x1
+#define EDU_COMPUTING_FACTORIAL 0x1
 #define EDU_RAISE_IRQ_FACTORIAL 0x80
 
 #define EDU_ADDR_DMA_SRC 0x80
@@ -37,6 +40,9 @@
 #define EDU_DMA_CMD_DIRC 0x2
 #define EDU_DMA_CMD_RAISE_IRQ 0x4
 
+#define EDU_BUFFER_SIZE 4096
+#define EDU_BUFFER_ADDR 0x40000
+
 
 struct edu_device{
     dma_addr_t dma_handle;
@@ -47,8 +53,8 @@ struct edu_device{
 
     wait_queue_head_t factorial_wait;
     wait_queue_head_t dma_wait;
-    atomic_t factorial_done;
-    atomic_t dma_done;
+    // atomic_t factorial_done;
+    // atomic_t dma_done;
 
     u32 factorial_result;
     
@@ -74,19 +80,20 @@ MODULE_DEVICE_TABLE(pci, edu_id); /*exports pci_device_id table to userspace for
 
 
 static irqreturn_t edu_irq_handler(int irq, void *dev_id){
-    //todo atomic and wake_up_interruptible did i do correctly
-    irqreturn_t ret_val = IRQ_NONE;
-    struct edu_device *pdev = dev_id;
+    //todo wake_up_interruptible did i do correctly
     u32 irq_status;
     u32 dma_cmd;
     u32 factorial_val;
+    irqreturn_t ret_val = IRQ_NONE;
+    struct edu_device *pdev = dev_id;
+
     if(!pdev||!pdev->p_iomem){
         return ret_val;
     }
     irq_status = readl(pdev->p_iomem+ EDU_ADDR_INTR_STAT);
     
     // pr_info("EDU IRQ: status=0x%x\n", irq_status);
-
+    /*here if nedded use the factorial_val or dma operation*/
     if(irq_status & EDU_RAISE_IRQ_FACTORIAL){
         // handle_factorial_computation(pdev);
         factorial_val = readl(pdev->p_iomem+EDU_ADDR_FACTORIAL);
@@ -194,7 +201,8 @@ static struct pci_driver edu_pci_driver = {
 
 // static ssize_t dma_write(struct file *file, const char __user *buffer,
 //                             size_t length, loff_t *offset)
-static int edu_open(struct inode *inode, struct file *file){
+static int edu_open(struct inode *inode, struct file *filp){
+    // todo can erase this check
     u32 val = 17; /*random val to check livenss*/
     u32 not_val = ~val;
     writel(val, edu_dev->p_iomem + EDU_ADDR_LIVE_CHECK);
@@ -203,22 +211,144 @@ static int edu_open(struct inode *inode, struct file *file){
         pr_info("ERROR: canot open qemu edu device\n");
         return 1;
     }
+
+    filp->private_data =  container_of(inode->i_cdev, struct edu_device, edu_cdev);
     pr_info("edu device opened\n");
     return 0;
 }
+
+
 static int edu_release(struct inode *inode, struct file *file)
 {
     pr_info("edu device closed\n");
     return 0;
 }
+static int edu_mmap(struct file *filp, struct vm_area_struct *vma){
+    struct edu_device* pdev = filp->private_data;
+    unsigned long vm_size = vma->vm_end - vma->vm_start;
+    // unsigned long offset = vma->vm_pgoff <<PAGE_SHIFT;
+    if(!pdev || !pdev->p_iomem){
+        pr_info("ERROR: edu_mmap, no device\n");
+        return -ENODEV;
+    }
+
+    if(vm_size>EDU_BUFFER_SIZE){
+        pr_info("ERROR: edu_mmap, vm_size = %lu > %d = EDU_BUFFER_SIZE\n",vm_size,EDU_BUFFER_SIZE);
+        return -EINVAL;
+    }
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);/*marks memory uncacheable, access from hardware and not buffered in CPU caches*/
+    /*__pa()-macro that translates virtual address to its physical address*/
+    return vm_iomap_memory(vma, __pa(pdev->dma_virt_addr), vm_size);
+}
+
+static int ioctl_device_id(struct edu_device *pdev, u32 __user *arg) {
+    u32 val = readl(pdev->p_iomem + EDU_ADDR_ID);
+    return put_user(val, arg);
+}
+
+
+static int ioctl_live_check(struct edu_device *pdev, u32 __user *arg) {
+    u32 val;
+    if (get_user(val, arg)) {
+        return -EFAULT;
+    }
+    writel(val, pdev->p_iomem + EDU_ADDR_LIVE_CHECK);
+    val = readl(pdev->p_iomem + EDU_ADDR_LIVE_CHECK);
+    return put_user(val, arg);
+}
+
+static bool is_computing_factorial(struct edu_device *pdev) {
+    return readl(pdev->p_iomem + EDU_ADDR_STAT_REG) & EDU_COMPUTING_FACTORIAL;
+}
+
+static int ioctl_factorial(struct edu_device *pdev, u32 __user *arg) {
+    u32 val;
+    if (get_user(val, arg)) {
+        return -EFAULT;
+    }
+    /*raise interrupt after finishing factorial computation*/ 
+    
+    
+    writel(val, pdev->p_iomem + EDU_ADDR_FACTORIAL);
+    if (wait_event_interruptible(pdev->factorial_wait, !is_computing_factorial(pdev))) {
+        return -ERESTARTSYS;
+    }
+    writel(EDU_RAISE_IRQ_FACTORIAL, pdev->p_iomem + EDU_ADDR_STAT_REG);
+    // read result
+    val = readl(pdev->p_iomem + EDU_ADDR_FACTORIAL);
+    return put_user(val, arg);
+}
+
+
+static int ioctl_raise_irq(struct edu_device *pdev, u32 arg) {
+    writel(arg, pdev->p_iomem + EDU_ADDR_INTR_RAISE);
+    return 0;
+}
+
+static bool start_dma(struct edu_device *pdev) {
+    return readl(pdev->p_iomem + EDU_ADDR_DMA_CMD) & EDU_DMA_CMD_TRANSFER;
+}
+
+static int dma_operation(struct edu_device *pdev, u32 len, u32 src, u32 dst ,u32 cmd) {
+    // u32 src, dst, cmd;
+    if (len == 0 || len > EDU_DMA_BUF_SIZE) {
+        return -EINVAL;
+    }
+    writel(src, pdev->p_iomem + EDU_ADDR_DMA_SRC);
+    writel(dst, pdev->p_iomem + EDU_ADDR_DMA_DIST);
+    writel(len, pdev->p_iomem + EDU_ADDR_DMA_SIZE);
+    writel(cmd, pdev->p_iomem + EDU_ADDR_DMA_CMD);
+    if (wait_event_interruptible(pdev->dma_wait, !start_dma(pdev))) {
+        return -ERESTARTSYS;
+    }
+    return 0;
+}
+
+static int ioctl_dma_to_device(struct edu_device *pdev, unsigned long arg) {
+    u32 args[3]; /* len, src, dst */
+    u32 cmd = EDU_DMA_CMD_TRANSFER|EDU_DMA_CMD_DIRC|EDU_DMA_CMD_RAISE_IRQ;
+    
+    if (copy_from_user(args, (void __user *)arg, sizeof(args)))
+        return -EFAULT;
+    return dma_operation(pdev, args[0], args[1],args[2], cmd);
+}
+
+static int ioctl_dma_from_device(struct edu_device *pdev, unsigned long arg) {
+    u32 args[3]; /* len, src, dst */
+    u32 cmd = EDU_DMA_CMD_TRANSFER|EDU_DMA_CMD_RAISE_IRQ;
+    
+    if (copy_from_user(args, (void __user *)arg, sizeof(args)))
+        return -EFAULT;
+    return dma_operation(pdev, args[0], args[1],args[2], cmd);
+}
+
+
+static long edu_ioctl (struct file *filp, unsigned int cmd, unsigned long arg){
+    struct edu_device *pdev = filp->private_data;
+    switch (cmd) {
+        case EDU_IOCTL_ID:
+            return ioctl_device_id(pdev, (u32 __user*)arg);
+        case EDU_IOCTL_LIVE_CHECK:
+            return ioctl_live_check(pdev, (u32 __user*)arg);
+        case EDU_IOCTL_FACTORIAL:
+            return ioctl_factorial(pdev, (u32 __user*)arg);
+        case EDU_IOCTL_RAISE_IRQ:
+            return ioctl_raise_irq(pdev, (u32)arg);
+        case EDU_IOCTL_DMA_TO_DEVICE:
+            return ioctl_dma_to_device(pdev, arg);
+        case EDU_IOCTL_DMA_FROM_DEVICE:
+            return ioctl_dma_from_device(pdev, arg);
+        default:
+            return -ENOTTY;
+    }
+}
+
 static struct file_operations char_ops = {
     .owner = THIS_MODULE,
-    // .read = device_read,
-    // .write = dma_write,
-    // .unlocked_ioctl = device_ioctl,
+    .unlocked_ioctl = edu_ioctl,
     .open = edu_open,
     .release = edu_release, 
-    // .mmap = insted of read/write becuse mmio
+    .mmap =edu_mmap, /*insted of read/write becuse the device uses mmio*/ 
 };
 
 static int __init pci_dev_init(void){
@@ -230,8 +360,8 @@ static int __init pci_dev_init(void){
     }
     init_waitqueue_head(&edu_dev->factorial_wait);
     init_waitqueue_head(&edu_dev->dma_wait);
-    atomic_set(&edu_dev->factorial_done, 0);
-    atomic_set(&edu_dev->dma_done, 0);
+    // atomic_set(&edu_dev->factorial_done, 0);
+    // atomic_set(&edu_dev->dma_done, 0);
 
     /*Allocate device numbers*/
     ret_val = alloc_chrdev_region(&edu_dev->dev_num, 0, 1, DEV_NAME);
