@@ -58,38 +58,5 @@ Registers:
   - Bit `0x02`: Direction (0: RAM → EDU, 1: EDU → RAM)  
   - Bit `0x04`: Request interrupt on completion
 
-DMA operation is performed between RAM and the device’s internal 4 KB buffer at `0x40000`.
+DMA operation is performed between RAM and the device’s internal 4 KB buffer.
 
-
-
-linux device drivers chapter 12:
-specific data structure, called pci_dev
-
-Plugging more than one bus in a single system is accomplished by means of bridges, special-purpose PCI peripherals whose task is joining two buses.
-
-work flow
-[implemented in](https://github.com/qemu/qemu/blob/v2.7.0/hw/misc/edu.c)
-
-- define addresses
-בעצם יש לנו כמה דרייברים 1. הPCI עצמו . 
-2 IRQ controller
-3  DMA controller
-
-- struct pci_driver
-    static struct pci_driver edu_pci_driver = {
-    .name = ,
-    .id_table = ,
-    .probe = ,
-    .remove = ,
-    };
-- IRQ (Interrupt Request)
-- ioctl
-- struct file_operations
-      struct file_operations edu_fops = {
-    .owner = ,
-    .open = ,
-    .llseek	= ,
-    .release = ,
-    .unlocked_ioctl =,
-    .mmap = ,
-};
