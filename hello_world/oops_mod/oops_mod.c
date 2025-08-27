@@ -9,7 +9,8 @@ MODULE_LICENSE("GPL");
 
 static int my_oops_init(void)
 {
-	char *p = 0;
+	char a;
+	char *p = &a;
 
 	pr_info("before init\n");
 	*p = 'a';
