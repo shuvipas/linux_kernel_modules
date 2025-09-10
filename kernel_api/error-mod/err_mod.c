@@ -4,7 +4,7 @@
 
 
 MODULE_DESCRIPTION("Error module");
-MODULE_AUTHOR("Kernel Hacker");
+MODULE_AUTHOR("s02");
 MODULE_LICENSE("GPL");
 
 static int n1, n2;

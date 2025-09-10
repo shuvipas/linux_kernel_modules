@@ -1,0 +1,8 @@
+# add  KBUILD_EXTRA_SYMBOLS becuse: ERROR: modpost: "task_info_print_list" [list_test.ko] undefined
+# another option is to make them in one module : obj-m := list_sync.o list_test.o
+ 
+KBUILD_EXTRA_SYMBOLS := ../list_sync/Module.symvers 
+
+ccflags-y = -Wno-unused-function -Wno-unused-label -Wno-unused-variable
+
+obj-m = list_test.o
