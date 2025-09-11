@@ -28,7 +28,7 @@ MODULE_LICENSE("GPL");
 
 struct kbd {
 	struct cdev cdev;
-	/* TODO 3: add spinlock */
+	spinlock_t lock;
 	char buf[BUFFER_SIZE];
 	size_t put_idx, get_idx, count;
 } devs[1];
@@ -73,7 +73,6 @@ static void put_char(struct kbd *data, char c)
 {
 	if (data->count >= BUFFER_SIZE)
 		return;
-
 	data->buf[data->put_idx] = c;
 	data->put_idx = (data->put_idx + 1) % BUFFER_SIZE;
 	data->count++;
@@ -82,6 +81,10 @@ static void put_char(struct kbd *data, char c)
 static bool get_char(char *c, struct kbd *data)
 {
 	/* TODO 4: get char from buffer; update count and get_idx */
+	if (data->count >= BUFFER_SIZE || data->get_idx == data->put_idx)
+		return false;
+	
+	
 	return false;
 }
 
@@ -99,13 +102,23 @@ static inline u8 i8042_read_data(void)
 	return val;
 }
 
-irqreturn_t kbd_interrupt_handler(int irq_no, void *dev_id)
+static irqreturn_t kbd_interrupt_handler(int irq_no, void *dev_id)
 {
+	u8 scaned_key;
+	char char_key;
+	struct kdb* data;
 	pr_info("keylogger interrupt handler\n");
-	/* TODO 3: read the scancode */
-	/* TODO 3: interpret the scancode */
-	/* TODO 3: display information about the keystrokes */
-	/* TODO 3: store ASCII key to buffer */
+	scaned_key = i8042_read_data();
+	if(is_key_press(scaned_key))
+	{
+		char_key = get_ascii(scaned_key);
+		pr_info("kbd_interrupt_handler: scancode=0x%x (%u) ch=%c\n",
+         scaned_key, scaned_key, char_key);
+		data = (struct kdb*) dev_id;
+		spin_lock(&data->lock);
+		put_char(data, char_key);
+		spin_unlock(&data->lock);
+	}
 	return IRQ_NONE;
 
 }
@@ -164,12 +177,12 @@ static int __init kbd_init(void)
 		goto out_release_region;
 	}
 
-	/* TODO 3: initialize spinlock */
+	spin_lock_init(&devs[0].lock);
 
 	err = request_irq(I8042_KBD_IRQ, kbd_interrupt_handler, IRQF_SHARED, MODULE_NAME, &devs[0]);
 	if (err < 0)
 	{
-		goto: out_release_regions;
+		goto out_release_regions;
 	}
 	cdev_init(&devs[0].cdev, &kbd_fops);
 	cdev_add(&devs[0].cdev, MKDEV(KBD_MAJOR, KBD_MINOR), 1);
