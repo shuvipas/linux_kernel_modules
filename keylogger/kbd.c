@@ -8,6 +8,7 @@
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
+#include <linux/string.h>
 
 MODULE_DESCRIPTION("keyboard logger");
 MODULE_AUTHOR("Shuvi Pasko");
@@ -25,6 +26,9 @@ MODULE_LICENSE("GPL");
 
 #define BUFFER_SIZE		1024
 #define SCANCODE_RELEASED_MASK	0x80
+
+#define CLEAR_CMD "clear"
+#define USER_CMD_BUF_LEN 20 /*must be bigger then strlen(CLEAR_CMD)*/
 
 struct kbd {
 	struct cdev cdev;
@@ -80,17 +84,26 @@ static void put_char(struct kbd *data, char c)
 
 static bool get_char(char *c, struct kbd *data)
 {
-	/* TODO 4: get char from buffer; update count and get_idx */
-	if (data->count >= BUFFER_SIZE || data->get_idx == data->put_idx)
+	unsigned long flags;
+	spin_lock_irqsave(&data->lock, flags);
+	if (data->count >= BUFFER_SIZE)
 		return false;
 	
-	
-	return false;
+	*c = data->buf[data->get_idx];
+	data->get_idx = (data->get_idx + 1) % BUFFER_SIZE;
+	(data->count)--;
+	spin_unlock_irqrestore(&data->lock, flags);
+	return true;
 }
 
 static void reset_buffer(struct kbd *data)
 {
-	/* TODO 5: reset count, put_idx, get_idx */
+	unsigned long flags;
+	spin_lock_irqsave(&data->lock, flags);
+	data->count = BUFFER_SIZE;
+	data->get_idx = 0;
+	data->put_idx = 0;
+	spin_unlock_irqrestore(&data->lock, flags);
 }
 
 /*
@@ -106,7 +119,7 @@ static irqreturn_t kbd_interrupt_handler(int irq_no, void *dev_id)
 {
 	u8 scaned_key;
 	char char_key;
-	struct kdb* data;
+	struct kbd* data;
 	pr_info("keylogger interrupt handler\n");
 	scaned_key = i8042_read_data();
 	if(is_key_press(scaned_key))
@@ -114,7 +127,7 @@ static irqreturn_t kbd_interrupt_handler(int irq_no, void *dev_id)
 		char_key = get_ascii(scaned_key);
 		pr_info("kbd_interrupt_handler: scancode=0x%x (%u) ch=%c\n",
          scaned_key, scaned_key, char_key);
-		data = (struct kdb*) dev_id;
+		data = (struct kbd*) dev_id;
 		spin_lock(&data->lock);
 		put_char(data, char_key);
 		spin_unlock(&data->lock);
@@ -138,14 +151,41 @@ static int kbd_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-/* TODO 5: add write operation and reset the buffer */
 
+static ssize_t kbd_write(struct file *file, const char __user *user_buffer,
+                    size_t size, loff_t * offset)
+{
+	char user_cmd[USER_CMD_BUF_LEN];
+	char* clear_cmd = CLEAR_CMD;
+	struct kbd* data = (struct kbd*) file->private_data;
+	if (copy_from_user(user_cmd, user_buffer, USER_CMD_BUF_LEN))
+        return -EFAULT;
+	user_cmd[USER_CMD_BUF_LEN - 1] = '\0';
+
+	if(!strcmp(clear_cmd,user_cmd))
+	{
+		pr_info("ERROR USEGE: clear cmd = %s\n", CLEAR_CMD);
+		return -EFAULT;
+	}
+	reset_buffer(data);
+	return BUFFER_SIZE;
+
+}
 static ssize_t kbd_read(struct file *file,  char __user *user_buffer,
 			size_t size, loff_t *offset)
 {
 	struct kbd *data = (struct kbd *) file->private_data;
 	size_t read = 0;
-	/* TODO 4: read data from buffer */
+	char c;
+	if (get_char(&c, data))
+	{
+		read = 1;
+		if (!put_user(c, user_buffer))
+		{
+			read =0;
+			pr_info("ERROR: kbd_read put_user( val = %c, user_buffer) failed\n",c);
+		}
+	}
 	return read;
 }
 
@@ -154,7 +194,7 @@ static const struct file_operations kbd_fops = {
 	.open = kbd_open,
 	.release = kbd_release,
 	.read = kbd_read,
-	/* TODO 5: add write operation */
+	.write = kbd_write,
 };
 
 static int __init kbd_init(void)
@@ -178,7 +218,6 @@ static int __init kbd_init(void)
 	}
 
 	spin_lock_init(&devs[0].lock);
-
 	err = request_irq(I8042_KBD_IRQ, kbd_interrupt_handler, IRQF_SHARED, MODULE_NAME, &devs[0]);
 	if (err < 0)
 	{
