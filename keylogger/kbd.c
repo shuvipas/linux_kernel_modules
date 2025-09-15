@@ -60,16 +60,32 @@ static int get_ascii(unsigned int scancode)
 	scancode &= ~SCANCODE_RELEASED_MASK;
 	if (scancode >= 0x02 && scancode <= 0x0b)
 		return *(row1 + scancode - 0x02);
-	if (scancode >= 0x10 && scancode <= 0x19)
+	else if (scancode >= 0x10 && scancode <= 0x19)
 		return *(row2 + scancode - 0x10);
-	if (scancode >= 0x1e && scancode <= 0x26)
+	else if (scancode >= 0x1e && scancode <= 0x26)
 		return *(row3 + scancode - 0x1e);
-	if (scancode >= 0x2c && scancode <= 0x32)
+	else if (scancode >= 0x2c && scancode <= 0x32)
 		return *(row4 + scancode - 0x2c);
-	if (scancode == 0x39)
-		return ' ';
-	if (scancode == 0x1c)
-		return '\n';
+	else
+	{
+		switch(scancode)
+		{
+			case 0x0C: return '-';
+    		case 0x0D: return '=';
+    		case 0x0E: return '\b';  /* backspace */
+    		case 0x0F: return '\t';  /* tab */
+			case 0x1A: return '[';
+		    case 0x1B: return ']';
+    		case 0x1C: return '\n';  /* Enter */
+			case 0x27: return ';';
+    		case 0x28: return '\'';
+    		case 0x29: return '`';
+			case 0x33: return ',';
+			case 0x34: return '.';
+			case 0x35: return '/';
+			case 0x39: return ' '; /* Space */				
+		}
+	}
 	return '?';
 }
 
@@ -85,22 +101,22 @@ static void put_char(struct kbd *data, char c)
 static bool get_char(char *c, struct kbd *data)
 {
 	unsigned long flags;
-	spin_lock_irqsave(&data->lock, flags);
-	if (data->count >= BUFFER_SIZE)
-		return false;
+	if (data->count >0)
+	{
+		*c = data->buf[data->get_idx];
+		data->get_idx = (data->get_idx + 1) % BUFFER_SIZE;
+		(data->count)--;
+		return true;
+	}
 	
-	*c = data->buf[data->get_idx];
-	data->get_idx = (data->get_idx + 1) % BUFFER_SIZE;
-	(data->count)--;
-	spin_unlock_irqrestore(&data->lock, flags);
-	return true;
+	return false;
 }
 
 static void reset_buffer(struct kbd *data)
 {
 	unsigned long flags;
 	spin_lock_irqsave(&data->lock, flags);
-	data->count = BUFFER_SIZE;
+	data->count = 0;
 	data->get_idx = 0;
 	data->put_idx = 0;
 	spin_unlock_irqrestore(&data->lock, flags);
@@ -125,8 +141,8 @@ static irqreturn_t kbd_interrupt_handler(int irq_no, void *dev_id)
 	if(is_key_press(scaned_key))
 	{
 		char_key = get_ascii(scaned_key);
-		pr_info("kbd_interrupt_handler: scancode=0x%x (%u) ch=%c\n",
-         scaned_key, scaned_key, char_key);
+		/* pr_info("kbd_interrupt_handler: scancode=0x%x (%u) ch=%c\n",
+         scaned_key, scaned_key, char_key); */
 		data = (struct kbd*) dev_id;
 		spin_lock(&data->lock);
 		put_char(data, char_key);
@@ -177,15 +193,18 @@ static ssize_t kbd_read(struct file *file,  char __user *user_buffer,
 	struct kbd *data = (struct kbd *) file->private_data;
 	size_t read = 0;
 	char c;
-	if (get_char(&c, data))
+	unsigned long flags;
+	bool more;
+	while(size--)
 	{
-		read = 1;
-		if (!put_user(c, user_buffer))
-		{
-			read =0;
-			pr_info("ERROR: kbd_read put_user( val = %c, user_buffer) failed\n",c);
-		}
+		spin_lock_irqsave(&data->lock, flags);
+		more = get_char(&c, data);
+		spin_unlock_irqrestore(&data->lock, flags);
+		if(!more) break;
+		if (put_user(c, user_buffer++)) return -EFAULT;
+		read++;
 	}
+	
 	return read;
 }
 
