@@ -74,7 +74,8 @@ static struct mon_proc *get_proc(pid_t pid)
 
 static void timer_handler(struct timer_list *tl)
 {
-	/* TODO 1: implement timer handler */
+	// struct my_device_data *my_data = from_timer(my_data, tl, timer);
+	pr_info("timer_handler: pid = %d, comm = %s\n",current->pid, current->comm);	
 	/* TODO 2: check flags: TIMER_TYPE_SET or TIMER_TYPE_ALLOC */
 		/* TODO 3: schedule work */
 		/* TODO 4: iterate the list and check the proccess state */
@@ -108,10 +109,10 @@ static long deferred_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	switch (cmd) {
 		case MY_IOCTL_TIMER_SET:
 			/* TODO 2: set flag */
-			/* TODO 1: schedule timer */
+			mod_timer(&my_data->timer, jiffies + arg * HZ);
 			break;
 		case MY_IOCTL_TIMER_CANCEL:
-			/* TODO 1: cancel timer */
+			timer_delete_sync(&my_data->timer);
 			break;
 		case MY_IOCTL_TIMER_ALLOC:
 			/* TODO 2: set flag and schedule timer */
@@ -137,7 +138,7 @@ struct file_operations my_fops = {
 	.unlocked_ioctl = deferred_ioctl,
 };
 
-static int deferred_init(void)
+static int __init deferred_init(void)
 {
 	int err;
 
@@ -156,12 +157,12 @@ static int deferred_init(void)
 	cdev_init(&dev.cdev, &my_fops);
 	cdev_add(&dev.cdev, MKDEV(MY_MAJOR, MY_MINOR), 1);
 
-	/* TODO 1: Initialize timer. */
+	timer_setup(&dev.timer, timer_handler,0);
 
 	return 0;
 }
 
-static void deferred_exit(void)
+static void __exit deferred_exit(void)
 {
 	struct mon_proc *p, *n;
 
@@ -170,7 +171,7 @@ static void deferred_exit(void)
 	cdev_del(&dev.cdev);
 	unregister_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR), 1);
 
-	/* TODO 1: Cleanup: make sure the timer is not running after exiting. */
+	timer_delete_sync(&dev.timer);
 	/* TODO 3: Cleanup: make sure the work handler is not scheduled. */
 
 	/* TODO 4: Cleanup the monitered process list */

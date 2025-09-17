@@ -1,6 +1,6 @@
 # Keylogger Module
 
-A simple Linux kernel module that implements a character device `/dev/kbd` for logging keystrokes using the i8042 keyboard controller. This is intended for educational purposes only (Linux kernel labs device driver exercises).
+A simple Linux kernel module that implements a character device `/dev/kbd` for logging keystrokes using the i8042 keyboard controller. 
 
 ## Build & Install
 

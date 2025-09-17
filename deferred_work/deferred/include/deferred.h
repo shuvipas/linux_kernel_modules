@@ -1,11 +1,3 @@
-/*
- * SO2 - Lab 6 - Deferred Work
- *
- * Exercises #3, #4, #5: deferred work
- *
- * Header file.
- */
-
 #ifndef __DEFERRED_H__
 #define __DEFERRED_H__
 

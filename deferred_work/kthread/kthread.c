@@ -1,8 +1,3 @@
-/*
- * SO2 - Lab 6 - Deferred Work
- *
- * Exercise #6: kernel thread
- */
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -12,7 +7,7 @@
 #include <linux/kthread.h>
 
 MODULE_DESCRIPTION("Simple kernel thread");
-MODULE_AUTHOR("SO2");
+MODULE_AUTHOR("Shuvi Pasko");
 MODULE_LICENSE("GPL");
 
 wait_queue_head_t wq_stop_thread;

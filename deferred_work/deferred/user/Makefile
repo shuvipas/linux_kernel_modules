@@ -1,6 +1,8 @@
-CFLAGS=-Wall -m32
-LDFLAGS=-static -m32
+CFLAGS=-Wall
+LDFLAGS=-static
 
+# all: test.c
+# 	gcc -static -o test test.c
 test: test.o
 
 .PHONY: clean

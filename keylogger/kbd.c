@@ -149,7 +149,6 @@ static irqreturn_t kbd_interrupt_handler(int irq_no, void *dev_id)
 		spin_unlock(&data->lock);
 	}
 	return IRQ_NONE;
-
 }
 	
 static int kbd_open(struct inode *inode, struct file *file)
