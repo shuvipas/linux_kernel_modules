@@ -1,0 +1,11 @@
+# IDE files
+.vscode/
+
+# Build artifacts
+modules.order
+Module.symvers
+*.ko
+*.o
+*.mod
+*.mod.*
+*.cmd

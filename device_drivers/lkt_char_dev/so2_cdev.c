@@ -179,6 +179,10 @@ static int __init so2_cdev_init(void)
 		devs[i].flag =0;
 		cdev_init(&devs[i].cdev,&so2_fops);
 		cdev_add(&devs[i].cdev, MKDEV(MY_MAJOR,i), 1);
+		/*todo: 
+		use class_create and device_create that you dont need to manuly mknod 
+		and after that device_destroy calss_destroy
+		*/
 	}
 	return 0;
 }

@@ -186,11 +186,12 @@ static ssize_t kbd_write(struct file *file, const char __user *user_buffer,
 	return BUFFER_SIZE;
 
 }
+
 static ssize_t kbd_read(struct file *file,  char __user *user_buffer,
 			size_t size, loff_t *offset)
 {
 	struct kbd *data = (struct kbd *) file->private_data;
-	size_t read = 0;
+	ssize_t read = 0;
 	char c;
 	unsigned long flags;
 	bool more;
