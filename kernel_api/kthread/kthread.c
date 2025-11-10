@@ -7,7 +7,7 @@
 #include <linux/atomic.h>
 #include <linux/delay.h>
 
-MODULE_DESCRIPTION("Simple kernel thread (fixed)");
+MODULE_DESCRIPTION("Simple kernel thread");
 MODULE_AUTHOR("Shuvi Pasko");
 MODULE_LICENSE("GPL");
 
