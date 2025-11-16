@@ -1,0 +1,5 @@
+First Task:
+
+We will start by finding the power consumption of the different processes, as well as retrieving the temperature and fan speed, and displaying them on the terminal. (Option to group the processes into categories)
+
+Next Step: Add CPU and RAM consumption (this might be possible to fetch via a Bash script using the top command).
