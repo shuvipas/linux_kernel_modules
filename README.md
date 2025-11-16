@@ -51,3 +51,98 @@ sudo rmmod example_module
 dmesg | tail -n 10
 make clean
 ```
+
+## Project Structure
+
+Below is an overview of each module group included in this repository.
+
+### Keylogger 
+
+    This folder contains a Linux kernel module that implements a simple keyboard logger using a character device interface. The module captures key presses from the PS/2 keyboard and stores them in a buffer accessible from user space.
+
+### Character Device Drivers — device_drivers/chardev
+
+    Examples demonstrating creation of character devices and interaction through /dev.
+
+    Concepts:
+
+    register_chrdev, cdev, file_operations
+
+    Implementing .open, .read, .write, .unlocked_ioctl
+
+    User-space interaction through custom IOCTL commands
+
+    Basic kernel–userspace communication patterns
+
+### Pseudo Filesystems — kernel_pseudo_filesystem
+
+    Modules that create custom entries under /proc.
+
+    Includes:
+
+    Simple read/write /proc file with manual buffering and permissions
+
+    Sequential output using the seq_file interface (seq_read, seq_printf)
+
+    Examples of offset handling, memory copying, and safe user-space access
+
+    Concepts:
+
+    proc_create, proc_ops / file_operations
+
+    copy_to_user, copy_from_user
+
+    Sequential iteration using seq_operations
+
+### PCI Driver for QEMU EDU Device — pci_driver/edu
+
+A full PCI driver implementation for the QEMU EDU virtual device.
+Device specification: https://www.qemu.org/docs/master/specs/edu.html
+
+Demonstrates:
+
+    PCI device discovery and initialization
+
+    BAR mapping with pci_iomap
+
+    MMIO register interaction
+
+    Interrupt handling (INTx / MSI)
+
+    DMA transfers using the device’s 4 KB internal buffer
+
+    IOCTL interface to control the device from user space
+
+    User-space test application (edu_test.c)
+
+Features Exercised:
+
+    Device ID read and liveness check
+
+    Factorial computation unit
+
+    Interrupt raise/ack
+
+    DMA host-to-device and device-to-host operations
+
+### Kernel API Modules — kernel_api_modules
+
+A collection of standalone small modules demonstrating fundamental kernel APIs.
+
+#### Concepts Across modules:
+
+    Module parameters
+
+    Kernel threads & wait queues
+
+    Spinlocks / atomic context
+
+    task_struct traversal
+
+    Virtual memory areas (vm_area_struct)
+
+    Kernel logging (pr_info, pr_debug)
+
+    Dynamic allocation with kmalloc/kfree and process metadata tracking.
+
+    Process and VMA iteration using kernel APIs and version-dependent macros.
