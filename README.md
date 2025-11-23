@@ -3,42 +3,19 @@ This repository contains a collection of Linux kernel modules written for self-l
 Each folder demonstrates a specific subsystem or API of the Linux kernel, including character devices, /proc filesystem integration, PCI drivers, and core kernel mechanisms such as memory allocation, spinlocks, and kernel threads.
 
 The modules are designed to be simple, self-contained examples that can be built and loaded individually.
-
-## Installing Required Tools
-
-Linux distributions provide the commands modprobe, insmod, and lsmod inside the kmod package.
+to bulid them you need to install some required tools header files for the kernel.
 
 On Fedora:
 ```bash
-sudo dnf install kmod
+sudo dnf install kmod kernel-devel kernel-headers
 ```
 
 On Ubuntu/Debian:
 ```bash 
 sudo apt-get install build-essential kmod
-```
-On Arch Linux:
-```bash
-sudo pacman -S gcc kmod
-```
-## Install Kernel Headers
-Before building anything, it is necessary to install the header files for the kernel.
-
-On Fedora:
-```bash
-sudo dnf install kernel-devel kernel-headers
-```
-
-On Ubuntu/Debian:
-```bash
 sudo apt-get update 
 apt-cache search linux-headers-`uname -r`
 sudo apt-get install linux-headers-`uname -r`
-```
-
-On Arch Linux:
-```bash
-sudo pacman -S linux-headers
 ```
 
 ## How to build & run the modules 
@@ -97,52 +74,12 @@ Below is an overview of each module group included in this repository.
 ### PCI Driver for QEMU EDU Device — pci_driver/edu
 
 A full PCI driver implementation for the QEMU EDU virtual device.
-Device specification: https://www.qemu.org/docs/master/specs/edu.html
-
-Demonstrates:
-
-    PCI device discovery and initialization
-
-    BAR mapping with pci_iomap
-
-    MMIO register interaction
-
-    Interrupt handling (INTx / MSI)
-
-    DMA transfers using the device’s 4 KB internal buffer
-
-    IOCTL interface to control the device from user space
-
-    User-space test application (edu_test.c)
-
-Features Exercised:
-
-    Device ID read and liveness check
-
-    Factorial computation unit
-
-    Interrupt raise/ack
-
-    DMA host-to-device and device-to-host operations
+### Netfilter module
+The netfilter module monitors outbound TCP connections by implementing a netfilter hook on the NF_INET_LOCAL_OUT chain. It initially detects and logs TCP connection initiation packets (SYN flag set, ACK flag cleared) by displaying their source IP address and port. The module supports destination based filtering through an ioctl interface, allowing users to specify a target IP address only packets destined for that address will be logged while others are ignored. The module handles network byte order conversion for ports and uses kernel-appropriate functions for IP address comparison and user-space data transfer.
+#### Bulid procces
+run test_runner.sh 
 
 ### Kernel API Modules — kernel_api_modules
 
 A collection of standalone small modules demonstrating fundamental kernel APIs.
 
-#### Concepts Across modules:
-
-    Module parameters
-
-    Kernel threads & wait queues
-
-    Spinlocks / atomic context
-
-    task_struct traversal
-
-    Virtual memory areas (vm_area_struct)
-
-    Kernel logging (pr_info, pr_debug)
-
-    Dynamic allocation with kmalloc/kfree and process metadata tracking.
-
-    Process and VMA iteration using kernel APIs and version-dependent macros.
